@@ -1,0 +1,7 @@
+- name: Deploy webapp on Ubuntu server 16.04 LTS on GCP (Fresh Install)
+  hosts: all
+  gather_facts: yes
+  connection: ssh
+  become: yes
+  roles:
+    - deploy

@@ -1,0 +1,13 @@
+---
+# vars file for deploy
+gcp_project: phonic-chemist-264211
+gcp_cred_kind : serviceaccount
+gcp_cred_file: /home/nmogbuk/Downloads/phonic-chemist-264211-5e24f416391d.json
+zone: "us-central1-a"
+region: "us-central1"
+git_repo_dir: /opt/ormuco-assessment
+django_app_dir: /opt/ormuco-assessment/ormuco_sample
+sample_site_domain: test.fmtlabz.tech
+virtualenv_path: /opt/ormuco-assessment/.env
+github_access_token: ca7623ac3e073b82ce350a05a62086417c46c487
+project_name: ormuco-assessment

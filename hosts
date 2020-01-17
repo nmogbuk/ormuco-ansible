@@ -1,0 +1,1 @@
+35.224.22.9 ansible_user=nmogbuk ansible_connection=ssh ansible_private_key_file=/home/nmogbuk/.ssh/id_rsa ansible_become=yes

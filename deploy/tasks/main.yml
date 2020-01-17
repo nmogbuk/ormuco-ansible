@@ -1,0 +1,116 @@
+- name: Update apt cache
+  apt: 
+    update_cache: yes
+    upgrade: dist
+  
+- name: Add Certbot PPA
+  apt_repository:
+    repo: ppa:certbot/certbot
+    state: present
+
+- name: Install Apt packages
+  apt:
+    pkg:
+      - nginx
+      - git
+      - software-properties-common
+      - certbot
+      - python-pip
+      - virtualenv
+      - python3
+      - python3-pip
+      - gcc
+      - build-essential
+      - python3-dev
+      - python-certbot-nginx
+
+- name: Install uWSGI
+  pip:
+    name: uwsgi
+    executable: pip3
+  become: yes
+
+- name: Create SSH Key pair
+  openssh_keypair:
+    path: /home/{{ ansible_user }}/.ssh/id_rsa
+    owner: "{{ ansible_user }}"
+    state: present
+
+- name: Read SSH Public key to authorize on Github
+  shell: cat /home/{{ ansible_user }}/.ssh/id_rsa.pub
+  register: ssh_pub_key
+
+- name: Authorize key with Github
+  github_key:
+    name: Access key for nmogbuk user on cloud VM
+    token: "{{ github_access_token }}"
+    pubkey: "{{ ssh_pub_key.stdout }}"
+
+
+- name: Clone application source code from github
+  git:
+    repo: git@github.com:nmogbuk/ormuco-assessment.git
+    dest: "{{ git_repo_dir }}"
+    accept_hostkey: True
+    key_file: /home/{{ ansible_user }}/.ssh/id_rsa
+
+- name: Set permissions on cloned repo
+  file:
+    path: "{{ git_repo_dir }}"
+    state: directory
+    owner: nmogbuk
+    group: www-data
+    recurse: yes
+
+- name: Install Pip packages
+  pip: 
+    chdir: "{{ git_repo_dir }}"
+    requirements: requirements.txt
+    state: present
+    virtualenv: "{{ virtualenv_path }}"
+    virtualenv_python: python3
+
+- name: Make migrations for Django app DB
+  command: "{{ virtualenv_path }}/bin/python manage.py makemigrations --noinput"
+  args:
+    chdir: "{{ django_app_dir }}"
+
+- name: Run migrations
+  command: "{{ virtualenv_path }}/bin/python manage.py migrate --noinput"
+  args:
+    chdir: "{{ django_app_dir }}"
+
+- name: Create Systemd unit file for uWSGI from template
+  template:
+    src: templates/uwsgi-systemd.j2
+    dest: /etc/systemd/system/uwsgi.service
+  notify: systemd-reload
+
+- name: Enable and start uWSGI systemd service
+  systemd:
+    name: uwsgi
+    state: started
+    enabled: yes
+
+- name: Create Nginx site config
+  template:
+    src: templates/nginx-sample.j2
+    dest: /etc/nginx/sites-available/nginx-sample.conf
+
+- name: Symlink nginx config to Sites Enabled
+  file:
+    src: /etc/nginx/sites-available/nginx-sample.conf
+    dest: /etc/nginx/sites-enabled/nginx-sample.conf
+    state: link
+  notify: restart-nginx
+
+- name: Copy Letsencrypt CLI config file
+  copy:
+    src: files/cli.ini
+    dest: /etc/letsencrypt/cli.ini
+
+- name: Provision SSL Cert for Nginx site using Certbot
+  command: certbot -d "{{ sample_site_domain }}"
+  notify: 
+    - restart-uwsgi
+    - restart-nginx

@@ -1,0 +1,17 @@
+---
+# handlers file for deploy
+- name: restart-nginx
+  systemd:
+    service: nginx
+    state: restarted
+
+- name: systemd-reload
+  systemd:
+    daemon-reload: yes
+
+- name: restart-uwsgi
+  systemd:
+    service: uwsgi
+    state: restarted
+
+    

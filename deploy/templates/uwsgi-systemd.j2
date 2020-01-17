@@ -1,0 +1,28 @@
+[Unit]
+Description=Sample Webapp using uWSGI
+
+# Requirements
+Requires=network.target
+
+# Dependency ordering
+After=network.target
+
+[Service]
+TimeoutStartSec=0
+RestartSec=10
+Restart=on-failure
+
+# path to app
+WorkingDirectory={{ django_app_dir }}
+# the user that you want to run app by
+User={{ ansible_user }}
+
+KillSignal=SIGQUIT
+Type=notify
+NotifyAccess=all
+
+# Main process
+ExecStart=/usr/local/bin/uwsgi --ini {{ git_repo_dir }}/uwsgi.ini
+
+[Install]
+WantedBy=multi-user.target
